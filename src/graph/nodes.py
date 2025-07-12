@@ -117,10 +117,12 @@ def planner_node(
 
     full_response = ""
     if AGENT_LLM_MAP["planner"] == "basic" and not configurable.enable_deep_thinking:
-        response = llm.invoke(messages)
+        # Add max_tokens limit to prevent token overflow
+        response = llm.invoke(messages, max_tokens=3000)
         full_response = response.model_dump_json(indent=4, exclude_none=True)
     else:
-        response = llm.stream(messages)
+        # Add max_tokens limit to prevent token overflow
+        response = llm.stream(messages, max_tokens=3000)
         for chunk in response:
             full_response += chunk.content
     logger.debug(f"Current state messages: {state['messages']}")
@@ -456,15 +458,26 @@ async def _setup_and_execute_agent_step(
 
     # Create and execute agent with MCP tools if available
     if mcp_servers:
-        async with MultiServerMCPClient(mcp_servers) as client:
-            loaded_tools = default_tools[:]
-            for tool in client.get_tools():
-                if tool.name in enabled_tools:
-                    tool.description = (
-                        f"Powered by '{enabled_tools[tool.name]}'.\n{tool.description}"
-                    )
-                    loaded_tools.append(tool)
-            agent = create_agent(agent_type, agent_type, loaded_tools, agent_type)
+        try:
+            async with MultiServerMCPClient(mcp_servers) as client:
+                loaded_tools = default_tools[:]
+                for tool in client.get_tools():
+                    if tool.name in enabled_tools:
+                        tool.description = (
+                            f"Powered by '{enabled_tools[tool.name]}'.\n{tool.description}"
+                        )
+                        loaded_tools.append(tool)
+                agent = create_agent(agent_type, agent_type, loaded_tools, agent_type)
+                return await _execute_agent_step(state, agent, agent_type)
+        except FileNotFoundError as e:
+            logger.warning(f"MCP server command not found: {e}. Falling back to default tools.")
+            # Fall back to default tools
+            agent = create_agent(agent_type, agent_type, default_tools, agent_type)
+            return await _execute_agent_step(state, agent, agent_type)
+        except Exception as e:
+            logger.warning(f"Failed to initialize MCP client: {e}. Falling back to default tools.")
+            # Fall back to default tools
+            agent = create_agent(agent_type, agent_type, default_tools, agent_type)
             return await _execute_agent_step(state, agent, agent_type)
     else:
         # Use default tools if no MCP servers are configured
