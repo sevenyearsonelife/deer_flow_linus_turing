@@ -24,6 +24,22 @@
             ]
         },
         {
+            "name": "UV: main.py (推荐)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "main",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "args": [
+                "--debug", "--max_plan_iterations", "1", "--max_step_num", "1"
+            ]
+        },
+        {
             "name": "Python: llm.py",
             "type": "debugpy",
             "request": "launch",
