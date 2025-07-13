@@ -140,7 +140,8 @@ if __name__ == "__main__":
         if args.query:
             user_query = " ".join(args.query)
         else:
-            user_query = input("Enter your query: ")
+            #user_query = input("Enter your query: ")
+            user_query = "如何评价乔布斯？"
 
         # Run the agent workflow with the provided parameters
         ask(
